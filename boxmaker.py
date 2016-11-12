@@ -98,11 +98,14 @@ def side((rx,ry),(sox,soy),(eox,eoy),tabVec,length,(dirx,diry),isTab,isDivider,n
   dirxN=0 if dirx else 1 # used to select operation on x or y
   diryN=0 if diry else 1
   (Vx,Vy)=(rx+sox*thickness,ry+soy*thickness)
+  (DivVx,DivVy)=(rx+sox*divMaterialThickness,ry+soy*divMaterialThickness)
   s='M '+str(Vx)+','+str(Vy)+' '
 
   if dirxN: Vy=ry # set correct line start
   if diryN: Vx=rx
 
+  if dirxN: DivVy=ry # set correct line start
+  if diryN: DivVx=rx
   # generate line as tab or hole using:
   #   last co-ord:Vx,Vy ; tab dir:tabVec  ; direction:dirx,diry ; thickness:thickness
   #   divisions:divs ; gap width:gapWidth ; tab width:tabWidth
@@ -110,44 +113,47 @@ def side((rx,ry),(sox,soy),(eox,eoy),tabVec,length,(dirx,diry),isTab,isDivider,n
   for n in range(1,int(divs)):
     if ((n%2) ^ (not isTab)) and numDividers>0 and not isDivider: # draw holes for divider joints in side walls
       w=gapWidth if isTab else tabWidth
+      secondVec2=secondVec
+      secondVec2/=thickness
+      secondVec2*=divMaterialThickness
       if n==1:
         w-=sox*thickness
       for m in range(1,int(numDividers)+1):
-        Dx=Vx+-diry*divSpacing*m
-        Dy=Vy+dirx*divSpacing*m
+        Dx=Vx-diry*divSpacing*m + (tabWidth + correction)* diry * .5 
+        Dy=Vy+dirx*divSpacing*m - (tabWidth + correction) * dirx * .5
         if n==1:
           Dx+=sox*thickness
         h='M '+str(Dx)+','+str(Dy)+' '
         Dx=Dx+dirx*w+dirxN*firstVec+first*dirx
         Dy=Dy+diry*w+diryN*firstVec+first*diry
         h+='L '+str(Dx)+','+str(Dy)+' '
-        Dx=Dx+dirxN*secondVec
-        Dy=Dy+diryN*secondVec
+        Dx=Dx-dirxN*secondVec2
+        Dy=Dy-diryN*secondVec2
         h+='L '+str(Dx)+','+str(Dy)+' '
         Dx=Dx-(dirx*w+dirxN*firstVec+first*dirx)
         Dy=Dy-(diry*w+diryN*firstVec+first*diry)
         h+='L '+str(Dx)+','+str(Dy)+' '
-        Dx=Dx-dirxN*secondVec
-        Dy=Dy-diryN*secondVec
+        Dx=Dx+dirxN*secondVec2
+        Dy=Dy+diryN*secondVec2
         h+='L '+str(Dx)+','+str(Dy)+' '
         drawS(h)
     if n%2:
       if n==1 and numDividers>0 and isDivider: # draw slots for dividers to slot into each other
         for m in range(1,int(numDividers)+1):
-          Dx=Vx+-diry*(divSpacing*m+thickness)
-          Dy=Vy+dirx*(divSpacing*m-thickness)
+          Dx=DivVx-diry*(divSpacing*m+divMaterialThickness)
+          Dy=DivVy+dirx*(divSpacing*m-divMaterialThickness)
           h='M '+str(Dx)+','+str(Dy)+' '
           Dx=Dx+dirx*(first+length/2)
           Dy=Dy+diry*(first+length/2)
           h+='L '+str(Dx)+','+str(Dy)+' '
-          Dx=Dx+dirxN*thickness
-          Dy=Dy+diryN*thickness
+          Dx=Dx+dirxN*divMaterialThickness
+          Dy=Dy+diryN*divMaterialThickness
           h+='L '+str(Dx)+','+str(Dy)+' '
           Dx=Dx-dirx*(first+length/2)
           Dy=Dy-diry*(first+length/2)
           h+='L '+str(Dx)+','+str(Dy)+' '
-          Dx=Dx-dirxN*thickness
-          Dy=Dy-diryN*thickness
+          Dx=Dx-dirxN*divMaterialThickness
+          Dy=Dy-diryN*divMaterialThickness
           h+='L '+str(Dx)+','+str(Dy)+' '
           drawS(h)
       Vx=Vx+dirx*gapWidth+dirxN*firstVec+first*dirx
@@ -170,20 +176,23 @@ def side((rx,ry),(sox,soy),(eox,eoy),tabVec,length,(dirx,diry),isTab,isDivider,n
   s+='L '+str(rx+eox*thickness+dirx*length)+','+str(ry+eoy*thickness+diry*length)+' '
   if isTab and numDividers>0 and not isDivider: # draw last for divider joints in side walls
     for m in range(1,int(numDividers)+1):
+      secondVec2=secondVec
+      secondVec2/=thickness
+      secondVec2*=divMaterialThickness
       Dx=Vx
-      Dy=Vy+dirx*divSpacing*m
+      Dy=Vy+dirx*divSpacing*m-(tabWidth + correction)*dirx*.5
       h='M '+str(Dx)+','+str(Dy)+' '
-      Dx=rx+eox*thickness+dirx*length
+      Dx=rx+eox*divMaterialThickness+dirx*length
       Dy=Dy+diry*tabWidth+diryN*firstVec+first*diry
       h+='L '+str(Dx)+','+str(Dy)+' '
-      Dx=Dx+dirxN*secondVec
-      Dy=Dy+diryN*secondVec
+      Dx=Dx-dirxN*secondVec2
+      Dy=Dy-diryN*secondVec2
       h+='L '+str(Dx)+','+str(Dy)+' '
       Dx=Vx
       Dy=Dy-(diry*tabWidth+diryN*firstVec+first*diry)
       h+='L '+str(Dx)+','+str(Dy)+' '
-      Dx=Dx-dirxN*secondVec
-      Dy=Dy-diryN*secondVec
+      Dx=Dx+dirxN*secondVec2
+      Dy=Dy+diryN*secondVec2
       h+='L '+str(Dx)+','+str(Dy)+' '
       drawS(h)
   return s
@@ -240,9 +249,11 @@ class BoxMaker(inkex.Effect):
         dest='div_l',default=25,help='Dividers (Length axis)')
       self.OptionParser.add_option('--div_w',action='store',type='int',
         dest='div_w',default=25,help='Dividers (Width axis)')
+      self.OptionParser.add_option('--div_material_thickness',action='store',type='float',
+        dest='div_material_thickness',default=6,help='Material thickness of Dividers')
 
   def effect(self):
-    global parent,nomTab,equalTabs,thickness,correction,divx,divy,hairline,linethickness
+    global parent,nomTab,equalTabs,thickness,correction,divx,divy,hairline,linethickness,divMaterialThickness
     
         # Get access to main SVG document element and get its dimensions.
     svg = self.document.getroot()
@@ -307,7 +318,7 @@ class BoxMaker(inkex.Effect):
     boxtype = self.options.boxtype
     divx = self.options.div_l
     divy = self.options.div_w
-        
+    divMaterialThickness = self.unittouu( str(self.options.div_material_thickness)  + unit )    
     if inside: # if inside dimension selected correct values to outside dimension
       X+=thickness*2
       Y+=thickness*2
@@ -435,8 +446,8 @@ class BoxMaker(inkex.Effect):
       a=tabs>>3&1; b=tabs>>2&1; c=tabs>>1&1; d=tabs&1 # extract tab status for each side
       tabbed=piece[5]
       atabs=tabbed>>3&1; btabs=tabbed>>2&1; ctabs=tabbed>>1&1; dtabs=tabbed&1 # extract tabbed flag for each side
-      xspacing=(X-thickness)/(divy+1)
-      yspacing=(Y-thickness)/(divx+1)
+      xspacing=(X-divMaterialThickness)/(divy+1)
+      yspacing=(Y-divMaterialThickness)/(divx+1)
       xholes = 1 if piece[6]<3 else 0
       yholes = 1 if piece[6]!=2 else 0
       railholes = 1 if piece[6]==3 else 0

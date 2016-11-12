@@ -55,6 +55,7 @@
 
   <param name="div_l" type="int" min="0" max="10" _gui-text="Dividers (Length axis)">2</param>
   <param name="div_w" type="int" min="0" max="10" _gui-text="Dividers (Width axis)">3</param>
+  <param name="div_material_thickness" type="float" min="0" max="100" _gui-text="Divider Material Thickness">3</param>
 
   <param name="spacing" type="float" precision="2" min="0.0" max="10000.0" _gui-text="Space Between Parts">1.0</param> 
   
